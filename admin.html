@@ -61,8 +61,11 @@ input {
   color: white;
   border: 1px solid #444;
   transition: 0.3s;
+  padding: 10px 12px;      /* ขยายพื้นที่ในช่อง */
+  font-size: 16px;         /* ขยายขนาดตัวอักษร */
+  width: 100%;             /* ให้ช่องกว้างเต็ม container */
+  box-sizing: border-box;  /* ให้ padding ไม่ล้น */
 }
-
 input:focus {
   outline: none;
   border-color: #00ffcc;
