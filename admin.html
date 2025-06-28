@@ -17,6 +17,24 @@
   margin: 0;
   padding: 0;
 }
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.dropdown-menu button:hover {
+  background: #eee;
+}
+
 
 header {
   background: #f9f9f9;
@@ -32,14 +50,39 @@ header h1 {
   margin: 0;
   color: #111;
 }
-
-.nav-buttons button, #logoutBtn {
-  background: transparent;
-  border: 1px solid #222;
-  padding: 6px 14px;
-  cursor: pointer;
-  font-size: 14px;
+.nav-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
 }
+
+.nav-buttons > div {
+  display: flex;
+  gap: 2px;
+}
+
+.nav-buttons button,
+.nav-buttons a button,
+#logoutBtn {
+  background: #473102b7;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-width: 120px;
+  text-align: center;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.nav-buttons button:hover,
+#logoutBtn:hover {
+  background: #333;
+  transform: scale(1.03);
+}
+
 
 #loginBox {
   max-width: 360px;
@@ -57,15 +100,17 @@ header h1 {
 }
 
 input {
-  background: #2a2a3a;
+  background: white;
   color: white;
   border: 1px solid #444;
   transition: 0.3s;
-  padding: 10px 12px;      /* ขยายพื้นที่ในช่อง */
+  padding: 10px 10px;      /* ขยายพื้นที่ในช่อง */
   font-size: 16px;         /* ขยายขนาดตัวอักษร */
   width: 100%;             /* ให้ช่องกว้างเต็ม container */
   box-sizing: border-box;  /* ให้ padding ไม่ล้น */
 }
+
+
 input:focus {
   outline: none;
   border-color: #00ffcc;
@@ -106,6 +151,7 @@ button:hover {
   background: transparent;
   cursor: pointer;
   margin-right: 10px;
+  margin-top: 5px;
 }
 
 .game-header {
@@ -143,26 +189,65 @@ button:hover {
   transform: scale(1.05);
 }
 .buyin-history {
-      font-size: 12px;
-      text-align: left;
+      font-size: 14px;
+      text-align: center;
       margin-bottom: 5px;
     }
+
+.dropdown-menu button {
+  display: block;
+  padding: 8px 10px;
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.dropdown-menu button:hover {
+  background-color: #6d5106;
+}
 
   </style>
 </head>
 <body>
 
 <header>
-  <h1>LUXU LIVE GAME AND MEMBERS MANAGEMENTS</h1>
+  <h1>LUXU LIVE GAME</h1>
+  
   <div class="nav-buttons" id="navButtons">
-    <button onclick="addMember()">+Member</button>
-    <button onclick="openManagePlayer()">Manage Player</button>
+  <div>
+    <a href="ranking.html" target="_blank"><button>🏆 All Time Money</button></a>
+  </div>
+  <div>
+    <button onclick="window.location.href='accounting.html'">Accounting</button>
+    <button onclick="window.location.href='rake.html'">🎰 Rake</button>
     <button onclick="addGame()">+Game</button>
+  </div>
+  <div>
+  <div class="dropdown" id="memberDropdown" style="position: relative;">
+  <button onclick="toggleMemberMenu()">Member</button>
+  <div id="memberMenu" class="dropdown-menu" style="display:none; position:absolute; right:0; background:#fff; border:1px solid #ccc; padding:10px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:1000; min-width:200px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <strong style="font-size:14px;">Members Management</strong>
+      <button onclick="closeMemberMenu()" style="border:none; background:none; font-size:16px; cursor:pointer;color: red;text-align: right;">✖</button>
+    </div>
+    <button onclick="openAddMember()" style="width:100%; text-align:left;color: black;">➕ เพิ่มสมาชิกใหม่</button>
+    <button onclick="openManageMember()" style="width:100%; text-align:left;color: black;">👥 จัดการ Member</button>
+  </div>
+</div>
+
+
+
     <button onclick="generatePlayerReport()">PlayerReport</button>
+  </div>
+  <div>
     <button id="logoutBtn" onclick="logout()">Logout</button>
   </div>
-</header>
+</div>
 
+
+</header>
 <div id="loginBox">
   <h2>Admin Login</h2>
   <input type="email" id="email" placeholder="Email" />
@@ -173,16 +258,15 @@ button:hover {
 <div id="popupOverlay">
   <div id="popupBox">
     <h3>เพิ่มสมาชิกใหม่</h3>
-    <input type="text" id="memberName" placeholder="Name (required)" required>
-    <input type="text" id="memberTel" placeholder="Tel (optional)">
-    <input type="email" id="memberEmail" placeholder="Email (optional)">
+    <input type="text" id="memberName" placeholder="Name : required" required>
+    <input type="text" id="memberTel" placeholder="Tel : (optional)">
+    <input type="email" id="memberEmail" placeholder="Email : (optional)">
     <div>
       <button onclick="confirmAddMember()">Confirm</button>
       <button onclick="closePopup()">Cancel</button>
     </div>
   </div>
 </div>
-
 <div id="gameContainer"></div>
 <!-- Popup สำหรับเลือกผู้เล่น -->
 <div id="playerSelectOverlay" style="display:none; position:fixed; inset:0; background:#fffdfdcb; z-index:9999; justify-content:center; align-items:center;">
@@ -249,7 +333,6 @@ button:hover {
   </div>
 </div>
 
-
 <!-- Manage Player Popup -->
 <div id="managePlayerOverlay" style="display:none; position:fixed; inset:0; background:#ffffffee; z-index:9999; justify-content:center; align-items:flex-start; padding-top:50px;text-align: center;">
   <div style="background:#fff; padding:20px; width:90%; max-width:600px; border:1px solid #ccc; border-radius:6px;">
@@ -272,23 +355,23 @@ button:hover {
 </div>
 
 <!-- Edit Player Popup -->
-<div id="editPlayerOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:9999; justify-content:center; align-items:center;">
+<div id="editPlayerOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:10001; justify-content:center; align-items:center;">
   <div style="background:#fff; padding:24px 28px; width:90%; max-width:400px; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.2); font-family:'Inter', sans-serif;">
     <h2 style="margin-top:0; margin-bottom:16px; font-size:18px; color:#222;">แก้ไขข้อมูลผู้เล่น</h2>
 
     <div style="margin-bottom:12px;">
       <label for="editName" style="display:block; font-size:13px; color:#555; margin-bottom:4px;">ชื่อผู้เล่น</label>
-      <input type="text" id="editName" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:5px;" />
+      <input type="text" id="editName" style="width:100%; padding:8px 10px; border:1px solid #cccccc; border-radius:5px;background-color: #464242;" />
     </div>
 
     <div style="margin-bottom:12px;">
       <label for="editTel" style="display:block; font-size:13px; color:#555; margin-bottom:4px;">เบอร์โทร</label>
-      <input type="text" id="editTel" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:5px;" />
+      <input type="text" id="editTel" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:5px;background-color: #464242;" />
     </div>
 
     <div style="margin-bottom:20px;">
       <label for="editEmail" style="display:block; font-size:13px; color:#555; margin-bottom:4px;">อีเมล</label>
-      <input type="email" id="editEmail" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:5px;" />
+      <input type="email" id="editEmail" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:5px;background-color: #464242;" />
     </div>
 
     <div style="text-align:right;">
@@ -297,12 +380,26 @@ button:hover {
     </div>
   </div>
 </div>
+<div id="manageMemberOverlay" style="display:none; position:fixed; inset:0; background:#ffffffcc; z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:#fff; padding:20px; width:90%; max-width:500px; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.2);">
+    <h3 style="margin-top:0;">ค้นหา/จัดการสมาชิก</h3>
+    <input type="text" id="searchMemberManage" placeholder="ค้นหาชื่อสมาชิก..." style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:5px;">
+    
+    <div id="manageMemberList" style="max-height:300px; overflow-y:auto; border-top:1px solid #ddd;"></div>
+
+    <div style="text-align:right; margin-top:10px;">
+      <button onclick="closeManageMember()" style="padding:6px 14px; background:#ccc; border:none; border-radius:5px;">ปิด</button>
+    </div>
+  </div>
+</div>
+
 
 
 <script>
   const app = firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
+  
 
   function login() {
     const email = document.getElementById("email").value.trim();
@@ -812,19 +909,7 @@ async function deleteGame(gameId) {
 
   const gameRef = db.collection("games").doc(gameId);
 
-  // 🔥 1. ลบ players
-  const playerSnap = await gameRef.collection("players").get();
-  for (const doc of playerSnap.docs) {
-    await doc.ref.delete();
-  }
-
-  // 🔥 2. ลบ sitout
-  const sitoutSnap = await gameRef.collection("sitout").get();
-  for (const doc of sitoutSnap.docs) {
-    await doc.ref.delete();
-  }
-
-  // 🔥 3. ลบ buyins ของทุก player
+  // 🔥 1. ลบ buyins ของทุก player
   const players = await gameRef.collection("players").get();
   for (const player of players.docs) {
     const buyinSnap = await player.ref.collection("buyins").get();
@@ -833,12 +918,24 @@ async function deleteGame(gameId) {
     }
   }
 
+  // 🔥 2. ลบ players
+  for (const player of players.docs) {
+    await player.ref.delete();
+  }
+
+  // 🔥 3. ลบ sitout
+  const sitoutSnap = await gameRef.collection("sitout").get();
+  for (const doc of sitoutSnap.docs) {
+    await doc.ref.delete();
+  }
+
   // 🔥 4. ลบตัวเกมหลัก
   await gameRef.delete();
 
   alert("ลบเกมและข้อมูลทั้งหมดเรียบร้อยแล้ว");
   location.reload();
 }
+
 
 
 async function breakGame(gameId) {
@@ -1039,8 +1136,13 @@ async function editPlayer(id) {
   document.getElementById("editTel").value = data.tel || "";
   document.getElementById("editEmail").value = data.email || "";
 
+  // ✅ ซ่อน popup จัดการสมาชิกก่อน
+  document.getElementById("manageMemberOverlay").style.display = "none";
+
+  // ✅ แล้วค่อยแสดง popup edit
   document.getElementById("editPlayerOverlay").style.display = "flex";
 }
+
 
 function closeEditPlayer() {
   document.getElementById("editPlayerOverlay").style.display = "none";
@@ -1064,6 +1166,75 @@ async function saveEditPlayer() {
   alert("อัปเดตข้อมูลเรียบร้อยแล้ว");
   closeEditPlayer();
   loadAllPlayers(); // โหลดตารางใหม่
+
+}
+function toggleMemberMenu() {
+  const menu = document.getElementById("memberMenu");
+  menu.style.display = menu.style.display === "none" ? "block" : "none";
+  document.addEventListener("click", hideMemberMenuOutside, { once: true });
+}
+
+function hideMemberMenuOutside(e) {
+  if (!e.target.closest('.dropdown')) {
+    document.getElementById("memberMenu").style.display = "none";
+  }
+}
+
+function openAddMember() {
+  document.getElementById("popupOverlay").style.display = "flex";
+  document.getElementById("memberMenu").style.display = "none";
+}
+
+function openManageMember() {
+  document.getElementById("manageMemberOverlay").style.display = "flex";
+  loadManageMemberList();
+}
+
+function closeManageMember() {
+  document.getElementById("manageMemberOverlay").style.display = "none";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const searchBox = document.getElementById("searchMemberManage");
+  if (searchBox) {
+    searchBox.addEventListener("input", e => {
+      loadManageMemberList(e.target.value.toLowerCase());
+    });
+  }
+});
+
+async function loadManageMemberList(query = "") {
+  const container = document.getElementById("manageMemberList");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const snap = await db.collection("members").orderBy("name").get();
+  snap.forEach(doc => {
+    const data = doc.data();
+    if (!query || data.name.toLowerCase().includes(query)) {
+      const div = document.createElement("div");
+      div.style = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;";
+      div.innerHTML = `
+        <span>${data.name}</span>
+        <span>
+          <button onclick="editPlayer('${doc.id}')">Edit</button>
+          <button onclick="deletePlayer('${doc.id}', '${data.name}')">Delete</button>
+        </span>
+      `;
+      container.appendChild(div);
+    }
+  });
+}
+
+function toggleMemberMenu() {
+  const menu = document.getElementById("memberMenu");
+  menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
+}
+
+function closeMemberMenu() {
+  const menu = document.getElementById("memberMenu");
+  menu.style.display = "none";
 }
 
 </script>

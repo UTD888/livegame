@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Rake Tracker</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="livegame.js"></script>
+  <style>
+
+
+  body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f6f9;
+      color: #333;
+    }
+    header {
+      background-color: #007bff;
+      padding: 10px 20px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    nav button {
+      padding: 8px 14px;
+      margin-left: 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #ffffff;
+      color: #007bff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    nav button:hover {
+      background-color: #e9ecef;
+    }
+    h2 {
+      color: #444;
+      margin: 20px;
+    }
+    .btn-edit { background-color: #ffc107; color: #000; }
+    .btn-save { background-color: #28a745; color: #fff; }
+    .btn-delete { background-color: #dc3545; color: #fff; }
+    .btn-game { background-color: #20c997; color: #fff; }
+    .popup-entry button {
+      margin-left: 5px;
+    }
+    
+  </style>
+</head>
+<body>
+
+<header>
+  <div><strong>🧲 Rake Tracker</strong></div>
+  <nav>
+    <button>Manage staff</button>
+    <button>+floor</button>
+    <button>+Dealer</button>
+    <button onclick="window.location.href='admin.html'">🏠</button>
+  </nav>
+</header>
+
+<h2>บันทึกรอบเกม</h2>
+<div style="margin-left: 20px;">
+  <button id="startGameBtn">เริ่มบันทึกการเล่น</button>
+</div>
+<!-- กล่องแถวเครื่องมือ -->
+<div style="
+  margin: 20px;
+  padding: 15px 20px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+">
+
+  <strong style="margin-right: 10px; color: #3366cc;">🔷 เรียกดูประวัติ</strong>
+
+  <label for="startDate" style="white-space: nowrap;">ตั้งแต่:</label>
+  <input type="date" id="startDate" style="
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  ">
+
+  <label for="endDate" style="white-space: nowrap;">ถึง:</label>
+  <input type="date" id="endDate" style="
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  ">
+
+  <button id="loadHistoryBtn" style="
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    background-color: #f5f5f5;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    cursor: pointer;
+  ">
+    🔍 <span>ค้นหา</span>
+  </button>
+
+</div>
+
+
+<div id="historyContainer" style="margin: 20px; display: none;">
+  <ul id="historyList" style="list-style: none; padding-left: 0;">
+    <li style="color: #999;">— ยังไม่มีข้อมูล —</li>
+  </ul>
+</div>
+
+
+
+<div id="gamesContainer"></div>
+
+
+<div id="popupStaff" style="display:none; position:fixed; top:10%; left:10%; right:10%; background:white; padding:20px; border-radius:10px; box-shadow:0 0 10px #999; z-index:1000;">
+  <h3>👥 รายชื่อ Staff</h3>
+  <strong>🎰 Dealers:</strong>
+  <ul id="dealerList"></ul>
+  <strong>🎲 Floors:</strong>
+  <ul id="floorList"></ul>
+  <button onclick="document.getElementById('popupStaff').style.display='none'">ปิด</button>
+</div>
+
+
+<script>
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    firebase.auth().onAuthStateChanged((user) => {
+      if (!user) {
+        alert("⚠️ กรุณาเข้าสู่ระบบก่อนใช้งานหน้านี้");
+        window.location.href = "/login.html";
+      }
+    });
+
+
+document.querySelector("nav button:nth-child(1)").addEventListener("click", async () => {
+  const docRef = db.collection("rakeMaster").doc("lists");
+  const docSnap = await docRef.get();
+  const data = docSnap.data();
+
+  const dealerList = document.getElementById("dealerList");
+  const floorList = document.getElementById("floorList");
+  dealerList.innerHTML = "";
+  floorList.innerHTML = "";
+
+  const updateArray = async (type, newArray) => {
+    await docRef.update({ [type]: newArray });
+    alert(`${type} updated`);
+    document.querySelector("nav button:nth-child(1)").click(); // รีโหลด popup
+  };
+
+  const renderList = (type, list, container) => {
+    list.forEach((name, index) => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        ${name}
+        <button onclick="editItem('${type}', ${index})">✏️</button>
+        <button onclick="deleteItem('${type}', ${index})">🗑️</button>
+      `;
+      container.appendChild(li);
+    });
+  };
+
+  renderList("dealers", data.dealers || [], dealerList);
+  renderList("floors", data.floors || [], floorList);
+
+  window.editItem = async (type, index) => {
+    const newName = prompt("แก้ไขชื่อใหม่:");
+    if (newName) {
+      const arr = [...(data[type] || [])];
+      arr[index] = newName;
+      await updateArray(type, arr);
+    }
+  };
+
+  window.deleteItem = async (type, index) => {
+    if (confirm("คุณแน่ใจว่าต้องการลบรายการนี้?")) {
+      const arr = [...(data[type] || [])];
+      arr.splice(index, 1);
+      await updateArray(type, arr);
+    }
+  };
+
+  document.getElementById("popupStaff").style.display = "block";
+});
+// ฟังก์ชันช่วยอัปเดต Firestore
+async function appendToList(type, newName) {
+  const docRef = db.collection("rakeMaster").doc("lists");
+  const docSnap = await docRef.get();
+  const data = docSnap.data() || {};
+  const list = [...(data[type] || [])];
+
+  if (list.includes(newName)) {
+    alert("🚫 มีชื่อนี้อยู่แล้ว");
+    return;
+  }
+
+  list.push(newName);
+  await docRef.update({ [type]: list });
+  alert(`✅ เพิ่ม ${newName} สำเร็จใน ${type}`);
+}
+// ปุ่ม +floor
+document.querySelector("nav button:nth-child(2)").addEventListener("click", async () => {
+  const name = prompt("กรอกชื่อ floor:");
+  if (name) await appendToList("floors", name.trim());
+});
+
+// ปุ่ม +Dealer
+document.querySelector("nav button:nth-child(3)").addEventListener("click", async () => {
+  const name = prompt("กรอกชื่อ dealer:");
+  if (name) await appendToList("dealers", name.trim());
+});
+
+
+
+// โหลดตารางที่กำลัง run ทุกครั้ง
+window.addEventListener("DOMContentLoaded", loadRunningGames);
+
+// เมื่อกดเริ่มเกมใหม่
+document.getElementById("startGameBtn").addEventListener("click", async () => {
+  const now = new Date();
+
+  // ✅ บันทึกไป Firestore
+  await db.collection("rakeGames").add({
+    createdAt: firebase.firestore.Timestamp.fromDate(now),
+    status: "Running"
+  });
+
+  // ✅ โหลดใหม่ทั้งหมดจาก Firestore อีกที
+  loadRunningGames();
+});
+
+// ✅ ฟังก์ชันเพิ่มแถว (ใหม่หรือจาก Firestore)
+function addRowToTable(gameId, tableBody, roundData = null, roundId = null) {
+  
+  const row = document.createElement("tr");
+
+  const isExisting = !!roundData;
+
+  // Start Button or Time Display
+  const tdStart = document.createElement("td");
+  if (isExisting && roundData.startTime?.toDate) {
+    tdStart.textContent = roundData.startTime.toDate().toLocaleTimeString("th-TH", { hour12: false });
+  } else {
+    const btnStart = document.createElement("button");
+    btnStart.textContent = "Start";
+    btnStart.addEventListener("click", async () => {
+      const roundRef = await db.collection("rakeGames").doc(gameId).collection("rakeRounds").add({
+        startTime: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      row.setAttribute("data-round-id", roundRef.id);
+      btnStart.textContent = new Date().toLocaleTimeString("th-TH", { hour12: false });
+      btnStart.disabled = true;
+      btnStart.style.backgroundColor = "#ccc";
+    });
+    tdStart.appendChild(btnStart);
+  }
+  row.appendChild(tdStart);
+
+  // Dropdown Floor
+  const tdFloor = document.createElement("td");
+  const floorSelect = document.createElement("select");
+  tdFloor.appendChild(floorSelect);
+  row.appendChild(tdFloor);
+
+  // Dropdown Dealer
+  const tdDealer = document.createElement("td");
+  const dealerSelect = document.createElement("select");
+  tdDealer.appendChild(dealerSelect);
+  row.appendChild(tdDealer);
+
+  // Input Rake
+  const tdRake = document.createElement("td");
+  const inputRake = document.createElement("input");
+  inputRake.type = "number";
+  tdRake.appendChild(inputRake);
+  row.appendChild(tdRake);
+
+  // Input Tip
+  const tdTip = document.createElement("td");
+  const inputTip = document.createElement("input");
+  inputTip.type = "number";
+  tdTip.appendChild(inputTip);
+  row.appendChild(tdTip);
+
+  // Tools Column
+  const tdTools = document.createElement("td");
+
+  const btnSave = document.createElement("button");
+  btnSave.textContent = "💾";
+  btnSave.addEventListener("click", async () => {
+    const rid = row.getAttribute("data-round-id") || roundId;
+    if (!rid) return alert("⛔ กรุณากด Start ก่อน");
+
+    const floor = floorSelect.value;
+    const dealer = dealerSelect.value;
+    const rake = parseFloat(inputRake.value);
+    const tip = parseFloat(inputTip.value);
+
+    if (!floor || !dealer || isNaN(rake) || isNaN(tip)) {
+      return alert("⛔ กรุณากรอกข้อมูลให้ครบก่อนบันทึก");
+    }
+
+    await db.collection("rakeGames").doc(gameId).collection("rakeRounds").doc(rid).set({
+      floor,
+      dealer,
+      rake,
+      tip,
+      ...(roundData?.startTime ? {} : { startTime: firebase.firestore.FieldValue.serverTimestamp() }),
+      endTime: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    btnSave.disabled = true;
+    floorSelect.disabled = true;
+    dealerSelect.disabled = true;
+    inputRake.disabled = true;
+    inputTip.disabled = true;
+
+    alert("✅ บันทึกเรียบร้อยแล้ว");
+    if (!roundId) {
+  addRowToTable(gameId, tableBody); // เพิ่มแถวใหม่เฉพาะรอบใหม่เท่านั้น
+  await recalculateSummary(gameId, tableBody.closest("div"));
+
+}
+});
+
+  tdTools.appendChild(btnSave);
+
+  // ✏️ Edit button
+  const btnEdit = document.createElement("button");
+  btnEdit.textContent = "✏️";
+  btnEdit.addEventListener("click", () => {
+    floorSelect.disabled = false;
+    dealerSelect.disabled = false;
+    inputRake.disabled = false;
+    inputTip.disabled = false;
+    btnSave.disabled = false;
+  });
+  tdTools.appendChild(btnEdit);
+
+  // 🗑️ Delete button
+  const btnDelete = document.createElement("button");
+  btnDelete.textContent = "🗑️";
+  btnDelete.addEventListener("click", async () => {
+    if (!roundId) return row.remove();
+    const confirmDel = confirm("คุณแน่ใจว่าต้องการลบรอบนี้?");
+    if (!confirmDel) return;
+    await db.collection("rakeGames").doc(gameId).collection("rakeRounds").doc(roundId).delete();
+    row.remove();
+    await recalculateSummary(gameId, tableBody.closest("div"));
+
+  });
+  tdTools.appendChild(btnDelete);
+
+  row.appendChild(tdTools);
+
+  // เติม dropdown
+  db.collection("rakeMaster").doc("lists").get().then(snap => {
+    const data = snap.data();
+    floorSelect.innerHTML = `<option disabled selected>เลือก Floor</option>`;
+    dealerSelect.innerHTML = `<option disabled selected>เลือก Dealer</option>`;
+    (data.floors || []).forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      floorSelect.appendChild(opt);
+    });
+    (data.dealers || []).forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      dealerSelect.appendChild(opt);
+    });
+
+    if (isExisting) {
+      row.setAttribute("data-round-id", roundId);
+      floorSelect.value = roundData.floor || "";
+      dealerSelect.value = roundData.dealer || "";
+      inputRake.value = roundData.rake ?? "";
+      inputTip.value = roundData.tip ?? "";
+
+      // Lock fields by default
+      floorSelect.disabled = true;
+      dealerSelect.disabled = true;
+      inputRake.disabled = true;
+      inputTip.disabled = true;
+      btnSave.disabled = true;
+    }
+  });
+
+  tableBody.appendChild(row);
+}
+
+
+
+
+
+async function loadRunningGames() {
+  const container = document.getElementById("gamesContainer");
+  container.innerHTML = "";
+
+  const snapshot = await db.collection("rakeGames")
+    .where("status", "==", "Running")
+    .orderBy("createdAt", "desc")
+    .get();
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const createdAtStr = data.createdAt?.toDate().toLocaleString("th-TH", {
+      dateStyle: "short",
+      timeStyle: "short",
+      hour12: false
+    });
+
+    
+    const block = document.createElement("div");
+    block.style = "margin: 20px 0; padding: 15px; background: #fff; border: 1px solid #ccc; border-radius: 8px;";
+
+    block.innerHTML = `
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div>Total Rake: <strong class="total-rake">0</strong></div>
+        <div>Total Tip: <strong class="total-tip">0</strong></div>
+        <div>Dealer: <strong class="total-dealers">0</strong> คน</div>
+        <div>Floor: <strong class="total-floors">0</strong> คน</div>
+        <div>Tip per man: <strong class="tip-per-man">0</strong></div>
+        <div>Tip Over8H: <strong class="tip-after-8hr">0</strong></div>
+        <button class="btn-end" data-game-id="${doc.id}" style="background: #dc3545; color: white;">End</button>
+        <button class="btn-delete" data-game-id="${doc.id}" style="background: #6c757d; color: white;">Delete</button>
+      </div>
+    `;
+
+    const table = document.createElement("table");
+    table.style = "width: 100%; border-collapse: collapse; margin-top: 15px;";
+    const thead = document.createElement("thead");
+    thead.innerHTML = `
+      <tr style="background-color: #f0f0f0;">
+        <th>Start</th>
+        <th>Floor</th>
+        <th>Dealer</th>
+        <th>Rake</th>
+        <th>Tip</th>
+        <th>Tools</th>
+      </tr>
+    `;
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    let totalRake = 0;
+    let totalTip = 0;
+    let tipBefore8hr = 0;
+    let tipAfter8hr = 0;
+    let totalDurationMs = 0;
+
+    const uniqueDealers = new Set();
+    const uniqueFloors = new Set();
+
+    const roundsSnapshot = await db
+      .collection("rakeGames")
+      .doc(doc.id)
+      .collection("rakeRounds")
+      .orderBy("startTime", "desc")
+      .get();
+
+  roundsSnapshot.forEach((roundDoc) => {
+  const round = roundDoc.data();
+
+  totalRake += round.rake || 0;
+  totalTip += round.tip || 0;
+
+  const startTime = round.startTime?.toDate();
+  const endTime = round.endTime?.toDate();
+  const duration = endTime - startTime;
+  if (!isNaN(duration)) totalDurationMs += duration;
+
+  if (round.dealer) uniqueDealers.add(round.dealer);
+  if (round.floor) uniqueFloors.add(round.floor);
+
+  const hrs = (duration || 0) / (1000 * 60 * 60);
+  if (hrs > 8) {
+    tipAfter8hr += round.tip || 0;
+  } else {
+    tipBefore8hr += round.tip || 0;
+  }
+
+  addRowToTable(doc.id, tbody, round, roundDoc.id);
+});
+
+// ✅ เพิ่มแถวเปล่าท้ายสุด
+addRowToTable(doc.id, tbody);
+
+
+    block.querySelector(".total-rake").textContent = totalRake.toFixed(2);
+    block.querySelector(".total-tip").textContent = totalTip.toFixed(2);
+    block.querySelector(".total-dealers").textContent = uniqueDealers.size;
+    block.querySelector(".total-floors").textContent = uniqueFloors.size;
+    block.querySelector(".tip-after-8hr").textContent = tipAfter8hr.toFixed(2);
+
+    const totalPeople = uniqueDealers.size + uniqueFloors.size;
+    const tipPerMan = totalPeople > 0
+      ? (tipBefore8hr / 2 / totalPeople) + (tipAfter8hr / totalPeople)
+      : 0;
+    block.querySelector(".tip-per-man").textContent = tipPerMan.toFixed(2);
+
+    // 👉 เก็บ dealer/floor ไว้ใน dataset
+    block.dataset.dealers = JSON.stringify([...uniqueDealers]);
+    block.dataset.floors = JSON.stringify([...uniqueFloors]);
+    block.dataset.totalDurationMs = totalDurationMs;
+
+    table.appendChild(tbody);
+    block.appendChild(table);
+    container.appendChild(block);
+
+    // ✅ ปุ่ม END
+    block.querySelector(".btn-end")?.addEventListener("click", async () => {
+      if (!confirm("คุณแน่ใจว่าต้องการจบตารางนี้?")) return;
+
+      const gameRef = db.collection("rakeGames").doc(doc.id);
+      const roundsRef = gameRef.collection("rakeRounds");
+      const summaryRef = db.collection("Rakehistory").doc(doc.id).collection("summaries");
+
+      const dealers = JSON.parse(block.dataset.dealers || "[]");
+      const floors = JSON.parse(block.dataset.floors || "[]");
+
+      if (dealers.length === 0 && floors.length === 0) {
+        alert("⚠️ ไม่มีข้อมูล Dealer หรือ Floor กรุณาตรวจสอบอีกครั้งก่อนจบตาราง");
+        return;
+      }
+
+      const summaryData = {
+        totalRake: parseFloat(block.querySelector(".total-rake")?.textContent || "0"),
+        totalTip: parseFloat(block.querySelector(".total-tip")?.textContent || "0"),
+        tipAfter8hr: parseFloat(block.querySelector(".tip-after-8hr")?.textContent || "0"),
+        tipPerMan: parseFloat(block.querySelector(".tip-per-man")?.textContent || "0"),
+        totalDurationHr: (parseFloat(block.dataset.totalDurationMs) / (1000 * 60 * 60)).toFixed(2),
+        dealers,
+        floors,
+        staffCount: dealers.length + floors.length,
+        createdAt: data.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      try {
+        await summaryRef.add(summaryData);
+
+        const roundsSnapshot = await roundsRef.get();
+        const batch = db.batch();
+        roundsSnapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+
+        await gameRef.delete();
+
+        alert("✅ จบตารางและลบสำเร็จ");
+        block.remove();
+      } catch (err) {
+        console.error("❌ ลบไม่สำเร็จ:", err);
+        alert("❌ เกิดข้อผิดพลาดในการลบ");
+      }
+    });
+  
+
+
+
+// ✅ ปุ่ม Delete (ลบ document อย่างเดียว ไม่สรุป)
+block.querySelector(".btn-delete")?.addEventListener("click", async () => {
+  if (!confirm("คุณแน่ใจว่าต้องการลบตารางนี้?")) return;
+
+  const gameRef = db.collection("rakeGames").doc(doc.id);
+  const roundsRef = gameRef.collection("rakeRounds");
+
+  try {
+    const roundsSnapshot = await roundsRef.get();
+    const batch = db.batch();
+    roundsSnapshot.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+
+    await gameRef.delete();
+
+    alert("🗑️ ลบตารางเรียบร้อยแล้ว");
+    block.remove();
+  } catch (err) {
+    console.error("❌ ลบไม่สำเร็จ:", err);
+    alert("❌ เกิดข้อผิดพลาดในการลบตาราง");
+  }
+});
+  }}
+
+
+async function recalculateSummary(gameId, block) {
+  const tbody = block.querySelector("tbody"); // ✅ ดึง tbody ที่ต้องใช้
+
+  const roundsSnapshot = await db
+    .collection("rakeGames")
+    .doc(gameId)
+    .collection("rakeRounds")
+    .orderBy("startTime", "desc")
+    .get();
+
+  let totalRake = 0;
+  let totalTip = 0;
+  let tipBefore8hr = 0;
+  let tipAfter8hr = 0;
+  let totalDurationMs = 0;
+  const uniqueDealers = new Set();
+  const uniqueFloors = new Set();
+
+  tbody.innerHTML = ""; // ✅ เคลียร์แถวเก่าออกก่อน
+
+  roundsSnapshot.forEach((roundDoc) => {
+    const round = roundDoc.data();
+
+    if (!round.dealer || !round.floor || isNaN(round.rake) || isNaN(round.tip)) return;
+
+    totalRake += round.rake || 0;
+    totalTip += round.tip || 0;
+
+    const startTime = round.startTime?.toDate?.();
+    const endTime = round.endTime?.toDate?.();
+    const duration = endTime - startTime;
+    if (!isNaN(duration)) totalDurationMs += duration;
+
+    if (round.dealer) uniqueDealers.add(round.dealer);
+    if (round.floor) uniqueFloors.add(round.floor);
+
+    const hrs = (duration || 0) / (1000 * 60 * 60);
+    if (hrs > 8) {
+      tipAfter8hr += round.tip || 0;
+    } else {
+      tipBefore8hr += round.tip || 0;
+    }
+
+    addRowToTable(gameId, tbody, round, roundDoc.id); // ✅ ใช้ gameId
+  });
+
+  addRowToTable(gameId, tbody); // ✅ เพิ่มแถวเปล่าท้ายสุด
+
+  const totalPeople = uniqueDealers.size + uniqueFloors.size;
+  let tipPerMan = 0;
+  if (totalPeople > 0) {
+    tipPerMan = (tipBefore8hr / 2 / totalPeople) + (tipAfter8hr / totalPeople);
+  }
+
+  block.querySelector(".total-rake").textContent = totalRake.toFixed(2);
+  block.querySelector(".total-tip").textContent = totalTip.toFixed(2);
+  block.querySelector(".total-dealers").textContent = uniqueDealers.size;
+  block.querySelector(".total-floors").textContent = uniqueFloors.size;
+  block.querySelector(".tip-after-8hr").textContent = tipAfter8hr.toFixed(2);
+  block.querySelector(".tip-per-man").textContent = tipPerMan.toFixed(2);
+
+  block.dataset.dealers = JSON.stringify([...uniqueDealers]);
+  block.dataset.floors = JSON.stringify([...uniqueFloors]);
+  block.dataset.totalDurationMs = totalDurationMs;
+}
+
+
+document.getElementById("loadHistoryBtn").addEventListener("click", async () => {
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+
+  if (!startDate || !endDate) {
+    alert("⛔ กรุณาเลือกวันที่ให้ครบ");
+    return;
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  console.log("📌 Searching root-level summaries...");
+  console.log("Start:", start.toISOString());
+  console.log("End:", end.toISOString());
+
+  const historyList = document.getElementById("historyList");
+  historyList.innerHTML = "";
+  document.getElementById("historyContainer").style.display = "block";
+
+  try {
+    const summariesSnap = await db.collectionGroup("summaries")
+      .where("createdAt", ">=", firebase.firestore.Timestamp.fromDate(start))
+      .where("createdAt", "<=", firebase.firestore.Timestamp.fromDate(end))
+      .orderBy("createdAt", "desc")
+      .get();
+
+    console.log("📊 Found summaries:", summariesSnap.size);
+
+    if (summariesSnap.empty) {
+      historyList.innerHTML = `<li style="color: #999;">— ไม่พบข้อมูลในช่วงเวลานี้ —</li>`;
+      return;
+    }
+
+    summariesSnap.forEach(doc => {
+      const data = doc.data();
+      const dateStr = data.createdAt?.toDate().toLocaleString("th-TH", {
+        dateStyle: "short",
+        timeStyle: "short",
+        hour12: false
+      }) || "-";
+
+      const li = document.createElement("li");
+li.style = "margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; background: #fff";
+
+li.innerHTML = `
+  <strong>🗓️ ${dateStr}</strong><br>
+  💰 Rake: ${data.totalRake?.toFixed(2) || 0} |
+  🎁 Tip: ${data.totalTip?.toFixed(2) || 0} |
+  👥 Staff: ${data.staffCount || 0}<br>
+  🧮 Tip/คน: ${data.tipPerMan?.toFixed(2) || 0} |
+  ⏱️ เกิน 8 ชม.: ${data.tipAfter8hr?.toFixed(2) || 0}<br>
+  🧑‍⚖️ Floor: ${data.floors?.join(", ") || "-"}<br>
+  🎰 Dealer: ${data.dealers?.join(", ") || "-"}
+  <div style="text-align: right;">
+    <button onclick="this.closest('li').remove()">❌</button>
+  </div>
+`;
+
+historyList.appendChild(li);
+
+    });
+  } catch (err) {
+    console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูล:", err);
+    historyList.innerHTML = `<li style="color: red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</li>`;
+  }
+});
+
+
+  </script>
+
+</body>
+</html>
