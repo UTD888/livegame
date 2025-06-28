@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Accounting Page</title>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+  <script src="livegame.js"></script>
+  
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 0; }
+    nav { background-color: #222; padding: 10px 20px; display: flex; align-items: center; }
+    nav button { background-color: #444; color: white; border: none; padding: 8px 16px; margin-right: 10px; cursor: pointer; border-radius: 5px; }
+    nav button:hover { background-color: #666; }
+    .container { padding: 20px; }
+    .controls { margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f0f0f0; }
+    input[type="text"], input[type="number"], input[type="date"] { width: 10%; padding: 5px; }
+    button.save-btn, button.cancel-btn { margin: 0 2px; }
+    fieldset {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    legend {
+      padding: 0 10px;
+      font-weight: bold;
+    }
+    button {
+      font-size: 14px;
+      padding: 6px 12px;
+    }
+    input[type="text"], input[type="number"], input[type="date"] {
+      padding: 5px;
+      font-size: 14px;
+    }
+    td:nth-child(1) input { width: 90%; }
+    td:nth-child(2) input { width: 80px; text-align: right; }
+    td:nth-child(3) input { width: 90%; }
+    #expenseTableHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 10px 0;
+      padding: 8px 12px;
+      background-color: #eef;
+      border-radius: 5px;
+      border: 1px solid #ccd;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    #expenseTableHeader div span {
+      font-weight: bold;
+    }
+    #expenseTableHeader button {
+      margin-left: 5px;
+    }
+
+
+  </style>
+</head>
+<body>
+  <nav>
+    <button id="showExpenseTable">📝 รายจ่าย</button>
+    <button id="showWageTable">ค่าแรงรายวัน</button>
+    <button id="btnSummary">สรุปผลรายวัน</button>
+    <button>ผลกำไรรวม</button>
+    <button onclick="window.location.href='admin.html'">🏠</button>
+  </nav>
+
+  <div class="container">
+    <div id="expenseControls" style="display:none">
+      <div style="margin-bottom: 15px;">
+        <label>เลือกวันที่: <input type="date" id="customExpenseDate"></label>
+<button id="startExpense">➕ เริ่มบันทึกรายวัน</button>
+
+      </div>
+      <fieldset style="margin-bottom: 15px; padding: 10px;">
+        <legend>📅 เรียกดูประวัติ</legend>
+        <label>ตั้งแต่: <input type="date" id="historyPickerStart"></label>
+        <label>ถึง: <input type="date" id="historyPickerEnd"></label>
+        <button id="loadHistory">🔍 ค้นหา</button>
+      </fieldset>
+      <div id="expenseTableHeader">
+        <div>รายจ่ายวันที่: <span id="expenseDateLabel"></span></div>
+        <div>
+          <button id="endTable">🔒 End</button>
+          <button id="deleteTable">🗑 Delete</button>
+        </div>
+      </div>
+      <div id="expenseTableArea"></div>
+    </div>
+    <div id="wageControls" style="display:none">
+  <div style="margin-bottom: 15px;">
+    <button id="startWage">➕ เริ่มบันทึกค่าแรง</button>
+  </div>
+
+  <fieldset style="margin-bottom: 15px; padding: 10px;">
+    <legend>📅 เรียกดูประวัติค่าแรง</legend>
+    <label>ตั้งแต่: <input type="date" id="wagePickerStart"></label>
+    <label>ถึง: <input type="date" id="wagePickerEnd"></label>
+    <button id="loadWageHistory">🔍 ค้นหา</button>
+  </fieldset>
+
+  <div id="wageTableHeader" style="display:flex; justify-content: space-between; align-items: center; background:#efe; padding:10px; border-radius:5px;">
+    <div>ค่าแรงวันที่: <span id="wageDateLabel"></span></div>
+    <div>
+      <button id="saveWageTable">💾 Save</button>
+      <button id="endWageTable">🔒 End</button>
+      <button id="deleteWageTable">🗑 Delete</button>
+    </div>
+  </div>
+  <div id="wageTableArea"></div> 
+</div>
+<div id="dailySummaryContainer" style="display: none;">
+  <h3>📋 สรุปผลรายวัน</h3>
+  <table id="dailySummaryTable">
+    <thead>
+      <tr>
+        <th>วันที่</th>
+        <th>ค่าใช้จ่ายทั้งหมด</th>
+        <th>Total Rake</th>
+        <th>Total Tip</th>
+        <th>ค่าแรงรายวัน+tip</th>
+        <th>กำไร</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div id="wageHistoryArea"></div>
+
+
+  </div>
+
+
+<!-- ✅ กล่องแสดงตารางค่าแรง -->
+
+  <script src="accounting-script.js"></script>
+  <script src="wage-script.js"></script>
+</body>
+</html>

@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LUXU LIVE GAME</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="livegame.js"></script>
+  <style>
+    body {
+  font-family: 'Inter', sans-serif;
+  background: #fff;
+  color: #222;
+  margin: 0;
+  padding: 0;
+}
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.dropdown-menu button:hover {
+  background: #eee;
+}
+
+
+header {
+  background: #f9f9f9;
+  padding: 12px 20px;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  font-size: 20px;
+  margin: 0;
+  color: #111;
+}
+.nav-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+}
+
+.nav-buttons > div {
+  display: flex;
+  gap: 2px;
+}
+
+.nav-buttons button,
+.nav-buttons a button,
+#logoutBtn {
+  background: #473102b7;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  min-width: 120px;
+  text-align: center;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.nav-buttons button:hover,
+#logoutBtn:hover {
+  background: #333;
+  transform: scale(1.03);
+}
+
+
+#loginBox {
+  max-width: 360px;
+  margin: 100px auto;
+  padding: 24px;
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+#loginBox h2 {
+  text-align: center;
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+
+input {
+  background: white;
+  color: white;
+  border: 1px solid #444;
+  transition: 0.3s;
+  padding: 10px 10px;      /* ขยายพื้นที่ในช่อง */
+  font-size: 16px;         /* ขยายขนาดตัวอักษร */
+  width: 100%;             /* ให้ช่องกว้างเต็ม container */
+  box-sizing: border-box;  /* ให้ padding ไม่ล้น */
+}
+
+
+input:focus {
+  outline: none;
+  border-color: #00ffcc;
+  background: #333;
+}
+
+button:hover {
+  opacity: 0.85;
+}
+
+
+#popupOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.9);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+#popupBox {
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 20px;
+  width: 90%;
+  max-width: 360px;
+  border-radius: 4px;
+}
+
+#popupBox h3 {
+  margin-top: 0;
+}
+
+#popupBox button {
+  padding: 6px 12px;
+  border: 1px solid #222;
+  background: transparent;
+  cursor: pointer;
+  margin-right: 10px;
+  margin-top: 5px;
+}
+
+.game-header {
+  max-width: 900px;
+  margin: 30px auto 10px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 4px;
+}
+
+.game-table {
+  width: 90%;
+  margin: 0 auto;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.game-table th, .game-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: center;
+}
+
+.game-table th {
+  background: #f3f3f3;
+}
+
+.game-table button {
+  transition: background 0.3s, transform 0.2s;
+}
+
+.game-table button:hover {
+  background: #00ddaa;
+  transform: scale(1.05);
+}
+.buyin-history {
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+
+.dropdown-menu button {
+  display: block;
+  padding: 8px 10px;
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.dropdown-menu button:hover {
+  background-color: #6d5106;
+}
+
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>LUXU LIVE GAME</h1>
+  
+  <div class="nav-buttons" id="navButtons">
+  <div>
+    <a href="ranking.html" target="_blank"><button>🏆 All Time Money</button></a>
+  </div>
+  <div>
+    <button onclick="window.location.href='accounting.html'">Accounting</button>
+    <button onclick="window.location.href='rake.html'">🎰 Rake</button>
+    <button onclick="addGame()">+Game</button>
+  </div>
+  <div>
+  <div class="dropdown" id="memberDropdown" style="position: relative;">
+  <button onclick="toggleMemberMenu()">Member</button>
+  <div id="memberMenu" class="dropdown-menu" style="display:none; position:absolute; right:0; background:#fff; border:1px solid #ccc; padding:10px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:1000; min-width:200px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <strong style="font-size:14px;">Members Management</strong>
+      <button onclick="closeMemberMenu()" style="border:none; background:none; font-size:16px; cursor:pointer;color: red;text-align: right;">✖</button>
+    </div>
+    <button onclick="openAddMember()" style="width:100%; text-align:left;color: black;">➕ เพิ่มสมาชิกใหม่</button>
+    <button onclick="openManageMember()" style="width:100%; text-align:left;color: black;">👥 จัดการ Member</button>
+  </div>
+</div>
+
+
+
+    <button onclick="generatePlayerReport()">PlayerReport</button>
+  </div>
+  <div>
+    <button id="logoutBtn" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+
+</header>
+<div id="loginBox">
+  <h2>Admin Login</h2>
+  <input type="email" id="email" placeholder="Email" />
+  <input type="password" id="password" placeholder="Password" />
+  <button onclick="login()">Login</button>
+</div>
+
+<div id="popupOverlay">
+  <div id="popupBox">
+    <h3>เพิ่มสมาชิกใหม่</h3>
+    <input type="text" id="memberName" placeholder="Name : required" required>
+    <input type="text" id="memberTel" placeholder="Tel : (optional)">
+    <input type="email" id="memberEmail" placeholder="Email : (optional)">
+    <div>
+      <button onclick="confirmAddMember()">Confirm</button>
+      <button onclick="closePopup()">Cancel</button>
+    </div>
+  </div>
+</div>
+<div id="gameContainer"></div>
+<!-- Popup สำหรับเลือกผู้เล่น -->
+<div id="playerSelectOverlay" style="display:none; position:fixed; inset:0; background:#fffdfdcb; z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:#fff; padding:20px; border:1px solid #ccc; width:300px;">
+    <h3>เลือกผู้เล่น</h3>
+    <input type="text" id="searchMember" placeholder="พิมพ์เพื่อค้นหา" style="width:100%; margin-bottom:10px;">
+    <div id="memberList" style="max-height:200px; overflow-y:auto; border:1px solid #ddd;"></div>
+    <div style="margin-top:10px; text-align:right;">
+      <button onclick="closePlayerPopup()">Cancel</button>
+    </div>
+  </div>
+</div>
+<!-- Player Report Popup -->
+<div id="reportOverlay" style="display:none; position:fixed; inset:0; background:rgba(245, 230, 230, 0.3); z-index:9999; justify-content:center; align-items:center; text-align: center;">
+  <div style="background:#fff; padding:24px 28px; max-width:700px; width:90%; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.2); font-family:'Inter', sans-serif;">
+    <h2 style="margin-top:0; font-size:18px; color:#222; margin-bottom:16px;">Player Report</h2>
+
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+      <label style="flex:1; font-size:13px; color:#141212;">
+        ตั้งแต่:
+        <input type="date" id="startDate" style="width:100%; padding:6px 8px; border:1px solid #ccc; border-radius:4px; background:white;color: #111;">
+      </label>
+      <label style="flex:1; font-size:13px; color:#141212;">
+        ถึง:
+        <input type="date" id="endDate" style="width:100%; padding:6px 8px; border:1px solid #ccc; border-radius:4px;background:white;color:#111;">
+      </label>
+      <div style="display:flex; align-items:end;">
+        <button onclick="generatePlayerReport()" style="padding:8px 14px; background:#007bff; color:#fff; border:none; border-radius:5px; cursor:pointer;">ค้นหา</button>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+      <select id="reportFilter" onchange="generatePlayerReport()" style="padding:6px 8px; border:1px solid #ccc; border-radius:4px;">
+        <option value="all">รวมทั้งหมด</option>
+        <option value="day">วันนี้</option>
+        <option value="week">สัปดาห์นี้</option>
+        <option value="month">เดือนนี้</option>
+      </select>
+
+      <select id="filterMember" style="padding:6px 8px; border:1px solid #ccc; border-radius:4px;">
+        <option value="">-- แสดงทุกคน --</option>
+      </select>
+
+      <input type="text" id="searchName" placeholder="ค้นหาชื่อ..." oninput="generatePlayerReport()" style="flex:1; padding:6px 10px; border:1px solid #ccc; border-radius:4px;">
+    </div>
+
+    <div style="overflow-x:auto; max-height:300px;">
+      <table style="width:100%; border-collapse:collapse; font-size:14px;">
+        <thead style="background:#f2f2f2;">
+          <tr>
+            <th style="padding:8px; border:1px solid #ddd;">Name</th>
+            <th style="padding:8px; border:1px solid #ddd;">Total Buy-in</th>
+            <th style="padding:8px; border:1px solid #ddd;">Total Cash-out</th>
+            <th style="padding:8px; border:1px solid #ddd;">Profit</th>
+          </tr>
+        </thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+    </div>
+
+    <div style="text-align:right; margin-top:14px;">
+      <button onclick="document.getElementById('reportOverlay').style.display='none'" style="padding:8px 14px; background:#ccc; color:#333; border:none; border-radius:5px; cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Player Popup -->
+<div id="managePlayerOverlay" style="display:none; position:fixed; inset:0; background:#ffffffee; z-index:9999; justify-content:center; align-items:flex-start; padding-top:50px;text-align: center;">
+  <div style="background:#fff; padding:20px; width:90%; max-width:600px; border:1px solid #ccc; border-radius:6px;">
+    <h3>จัดการผู้เล่น</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:14px;" border="1">
+      <thead>
+        <tr>
+          <th>ชื่อ</th>
+          <th>เบอร์โทร</th>
+          <th>Email</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="managePlayerBody"></tbody>
+    </table>
+    <div style="text-align:right; margin-top:10px;">
+      <button onclick="document.getElementById('managePlayerOverlay').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Player Popup -->
+<div id="editPlayerOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:10001; justify-content:center; align-items:center;">
+  <div style="background:#fff; padding:24px 28px; width:90%; max-width:400px; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.2); font-family:'Inter', sans-serif;">
+    <h2 style="margin-top:0; margin-bottom:16px; font-size:18px; color:#222;">แก้ไขข้อมูลผู้เล่น</h2>
+
+    <div style="margin-bottom:12px;">
+      <label for="editName" style="display:block; font-size:13px; color:#555; margin-bottom:4px;">ชื่อผู้เล่น</label>
+      <input type="text" id="editName" style="width:100%; padding:8px 10px; border:1px solid #cccccc; border-radius:5px;background-color: #464242;" />
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label for="editTel" style="display:block; font-size:13px; color:#555; margin-bottom:4px;">เบอร์โทร</label>
+      <input type="text" id="editTel" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:5px;background-color: #464242;" />
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label for="editEmail" style="display:block; font-size:13px; color:#555; margin-bottom:4px;">อีเมล</label>
+      <input type="email" id="editEmail" style="width:100%; padding:8px 10px; border:1px solid #ccc; border-radius:5px;background-color: #464242;" />
+    </div>
+
+    <div style="text-align:right;">
+      <button onclick="saveEditPlayer()" style="padding:8px 16px; background:#007bff; color:#fff; border:none; border-radius:5px; margin-right:8px; cursor:pointer;">Save</button>
+      <button onclick="closeEditPlayer()" style="padding:8px 16px; background:#ccc; color:#333; border:none; border-radius:5px; cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+<div id="manageMemberOverlay" style="display:none; position:fixed; inset:0; background:#ffffffcc; z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:#fff; padding:20px; width:90%; max-width:500px; border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,0.2);">
+    <h3 style="margin-top:0;">ค้นหา/จัดการสมาชิก</h3>
+    <input type="text" id="searchMemberManage" placeholder="ค้นหาชื่อสมาชิก..." style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:5px;">
+    
+    <div id="manageMemberList" style="max-height:300px; overflow-y:auto; border-top:1px solid #ddd;"></div>
+
+    <div style="text-align:right; margin-top:10px;">
+      <button onclick="closeManageMember()" style="padding:6px 14px; background:#ccc; border:none; border-radius:5px;">ปิด</button>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  
+
+  function login() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("navButtons").style.display = "flex";
+        document.getElementById("logoutBtn").style.display = "inline-block";
+        loadGames();
+      })
+      .catch(error => {
+        alert("Login failed: " + error.message);
+      });
+  }
+
+  function logout() {
+    auth.signOut().then(() => {
+      location.reload();
+    });
+  }
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("navButtons").style.display = "flex";
+      document.getElementById("logoutBtn").style.display = "inline-block";
+      loadGames();
+    }
+  });
+
+  function addMember() {
+    document.getElementById("popupOverlay").style.display = "flex";
+  }
+
+  function closePopup() {
+    document.getElementById("popupOverlay").style.display = "none";
+    document.getElementById("memberName").value = "";
+    document.getElementById("memberTel").value = "";
+    document.getElementById("memberEmail").value = "";
+  }
+
+  async function confirmAddMember() {
+    const name = document.getElementById("memberName").value.trim();
+    const tel = document.getElementById("memberTel").value.trim();
+    const email = document.getElementById("memberEmail").value.trim();
+
+    if (!name) {
+      alert("Please fill in required fields.");
+      return;
+    }
+
+    const existing = await db.collection("members").where("name", "==", name).get();
+    if (!existing.empty) {
+      alert("This name already exists.");
+      return;
+    }
+
+    const newRef = db.collection("members").doc();
+    await newRef.set({
+      id: newRef.id,
+      name,
+      tel,
+      email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    alert("Member added successfully");
+    closePopup();
+  }
+
+  async function addGame() {
+    const gameRef = db.collection("games").doc();
+    const now = new Date();
+    await gameRef.set({
+      id: gameRef.id,
+      status: "Running",
+      createdAt: firebase.firestore.Timestamp.fromDate(now)
+    });
+    loadGames();
+  }
+
+  async function loadGames() {
+    const container = document.getElementById("gameContainer");
+    container.innerHTML = "";
+    const snapshot = await db.collection("games").where("status", "==", "Running").get();
+    snapshot.forEach(doc => renderGameTable(doc.data()));
+  }
+
+async function renderGameTable(game) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "game-wrapper";
+
+  // หัวตาราง
+  const header = document.createElement("div");
+  header.className = "game-header";
+  const created = new Date(game.createdAt.seconds * 1000).toLocaleString();
+  header.innerHTML = `
+  <strong>${created}</strong> : ${game.status}
+  <button class="toggle-btn" onclick="this.parentElement.nextElementSibling.style.display = this.parentElement.nextElementSibling.style.display === 'none' ? '' : 'none'">Show/Hide</button>
+  <button class="toggle-btn" onclick="breakGame('${game.id}')">Break</button>
+  <button class="toggle-btn" onclick="deleteGame('${game.id}')">Delete</button>
+`;
+
+  // ตาราง
+  const table = document.createElement("table");
+  table.className = "game-table";
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th>Name</th>
+      <th>Buy-in</th>
+      <th>Cash-out</th>
+      <th>Total</th>
+      <th>Sit-out</th>
+      <th>Delete</th>
+    </tr>
+  `;
+
+  const tbody = document.createElement("tbody");
+
+  // โหลดข้อมูล players
+  const playerSnap = await db.collection("games").doc(game.id).collection("players").orderBy("createdAt").get();
+  const players = [];
+  playerSnap.forEach(doc => players.push(doc.data()));
+
+  for (let i = 0; i < 10; i++) {
+    const tr = document.createElement("tr");
+
+    // ช่อง Name
+    const tdName = document.createElement("td");
+    if (players[i]) {
+      tdName.textContent = players[i].name;
+    } else {
+      const btn = document.createElement("button");
+      btn.textContent = "+Player";
+      btn.onclick = () => openPlayerPopup(game.id, tr);
+      tdName.appendChild(btn);
+    }
+    tr.appendChild(tdName);
+
+    // Buy-in
+    const tdBuyin = document.createElement("td");
+    if (players[i]) {
+      renderBuyins(game.id, players[i].id, tdBuyin);
+    } else {
+      const btnBuy = document.createElement("button");
+      btnBuy.textContent = "Buy-in";
+      btnBuy.disabled = true;
+      tdBuyin.appendChild(btnBuy);
+    }
+    tr.appendChild(tdBuyin);
+
+    // Cash-out
+    const tdCash = document.createElement("td");
+    const tdTotal = document.createElement("td"); // ช่อง Total ควรประกาศตรงนี้
+    if (players[i]) {
+      const cash = players[i].cashout;
+      if (cash) {
+        const time = players[i].cashoutAt?.seconds
+          ? new Date(players[i].cashoutAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : "-";
+        tdCash.textContent = `${cash} @ ${time}`;
+      } else {
+        const btnCash = document.createElement("button");
+        btnCash.textContent = "Cash-out";
+        btnCash.onclick = () => openCashoutPopup(game.id, players[i].id, tdCash, tdTotal);
+        tdCash.appendChild(btnCash);
+      }
+
+      // โหลดและคำนวณ Total
+      updateTotal(game.id, players[i].id, tdTotal);
+    } else {
+      const btnCash = document.createElement("button");
+      btnCash.textContent = "Cash-out";
+      btnCash.disabled = true;
+      tdCash.appendChild(btnCash);
+    }
+    tr.appendChild(tdCash);
+
+    // Total (ช่องนี้ถูกผูกกับ tdTotal ด้านบน)
+    tr.appendChild(tdTotal);
+
+    // Sit-out
+const tdSit = document.createElement("td");
+const btnSit = document.createElement("button");
+btnSit.textContent = "Sit-out";
+if (players[i]) {
+  btnSit.onclick = () => handleSitOut(game.id, players[i].id, tr);
+}
+tdSit.appendChild(btnSit);
+tr.appendChild(tdSit);
+
+
+    // Delete
+    const tdDel = document.createElement("td");
+    const btnDel = document.createElement("button");
+    btnDel.textContent = "Delete";
+if (players[i]) {
+  btnDel.onclick = () => handleDeletePlayer(game.id, players[i].id, tr);
+}
+    tdDel.appendChild(btnDel);
+    tr.appendChild(tdDel);
+
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  wrapper.appendChild(header);
+  wrapper.appendChild(table);
+  document.getElementById("gameContainer").appendChild(wrapper);
+}
+
+
+
+// ฟังก์ชันซ่อน/แสดงตาราง
+function toggleTable(btn) {
+  const table = btn.parentElement.nextElementSibling;
+  if (table.style.display === "none") {
+    table.style.display = "";
+  } else {
+    table.style.display = "none";
+  }
+}
+
+let currentGameId = null;
+let currentRow = null;
+
+function closePlayerPopup() {
+  document.getElementById("playerSelectOverlay").style.display = "none";
+  document.getElementById("searchMember").value = "";
+  document.getElementById("memberList").innerHTML = "";
+  currentGameId = null;
+  currentRow = null;
+}
+
+async function openPlayerPopup(gameId, rowElement) {
+  currentGameId = gameId;
+  currentRow = rowElement;
+  document.getElementById("playerSelectOverlay").style.display = "flex";
+  loadMembers("");
+}
+
+document.getElementById("searchMember").addEventListener("input", e => {
+  loadMembers(e.target.value.toLowerCase());
+});
+
+async function loadMembers(query) {
+  const snap = await db.collection("members").orderBy("name").get();
+  const container = document.getElementById("memberList");
+  container.innerHTML = "";
+  snap.forEach(doc => {
+    const data = doc.data();
+    data.id = doc.id; // ✅ ใส่ id ลงใน object ที่ใช้
+    if (!query || data.name.toLowerCase().includes(query)) {
+      const div = document.createElement("div");
+      div.textContent = data.name;
+      div.style.padding = "5px";
+      div.style.cursor = "pointer";
+      div.style.borderBottom = "1px solid #eee";
+      div.onclick = () => selectMemberForGame(data); // ✅ data มี id แล้ว
+      container.appendChild(div);
+    }
+  });
+}
+
+
+
+// ✅ อัปเดต selectMemberForGame() ให้ผู้เล่นที่ sit-out แล้วสามารถเข้ามาใหม่ได้ (ไม่ซ้ำ)
+async function selectMemberForGame(member) {
+  if (!currentGameId || !currentRow) return;
+
+  // ตรวจเฉพาะ players collection
+  const snap = await db.collection("games").doc(currentGameId).collection("players")
+    .where("memberId", "==", member.id)
+    .get();
+
+  if (!snap.empty) {
+    alert("ผู้เล่นคนนี้อยู่ในเกมแล้ว");
+    return;
+  }
+
+  const playerRef = db.collection("games").doc(currentGameId).collection("players").doc();
+  await playerRef.set({
+    id: playerRef.id,
+    memberId: member.id,
+    name: member.name,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  currentRow.children[0].innerText = member.name;
+  closePlayerPopup();
+  loadGames();
+}
+// เพิ่มปุ่ม Buy-in ให้ทำงาน
+function openBuyinPopup(gameId, playerId, tdElement) {
+  const amount = prompt("Enter Buy-in amount:");
+  if (!amount || isNaN(amount)) return alert("Invalid amount");
+
+  const buyinRef = db.collection("games").doc(gameId)
+    .collection("players").doc(playerId)
+    .collection("buyins").doc();
+
+  buyinRef.set({
+    id: buyinRef.id,
+    amount: parseInt(amount),
+    createdAt: firebase.firestore.Timestamp.now()
+  }).then(() => {
+    renderBuyins(gameId, playerId, tdElement); // อัปเดตหน้าจอ
+  });
+}
+
+async function renderBuyins(gameId, playerId, tdElement) {
+  const snap = await db.collection("games").doc(gameId)
+    .collection("players").doc(playerId)
+    .collection("buyins").orderBy("createdAt").get();
+
+  tdElement.innerHTML = "";
+  let count = 1;
+
+  snap.forEach(doc => {
+    const data = doc.data();
+    let time = "-";
+    if (data.createdAt?.seconds) {
+      time = new Date(data.createdAt.seconds * 1000).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    const line = document.createElement("div");
+    line.className = "buyin-history";
+    line.textContent = `x${count}, ${data.amount}, ${time}`;
+    tdElement.appendChild(line);
+    count++;
+  });
+
+  const btn = document.createElement("button");
+  btn.textContent = "Buy-in";
+  btn.onclick = () => openBuyinPopup(gameId, playerId, tdElement);
+  tdElement.appendChild(btn);
+}
+
+// ✅ เพิ่ม popup สำหรับ Cash-out
+function openCashoutPopup(gameId, playerId, tdElement) {
+  const amount = prompt("Enter Cash-out amount:");
+  if (!amount || isNaN(amount)) return alert("Invalid amount");
+
+  const playerDoc = db.collection("games").doc(gameId).collection("players").doc(playerId);
+
+  playerDoc.get().then(doc => {
+    if (doc.exists && doc.data().cashout) {
+      alert("Cash-out already submitted.");
+      return;
+    }
+
+    playerDoc.update({
+      cashout: parseInt(amount),
+      cashoutAt: firebase.firestore.Timestamp.now()
+    }).then(() => {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      tdElement.innerHTML = `${amount} @ ${time}`;
+    });
+  });
+}
+// ✅ ฟังก์ชันคำนวณ Total = cashout - buyin รวม
+function updateTotal(gameId, playerId, tdTotal) {
+  const playerDoc = db.collection("games").doc(gameId).collection("players").doc(playerId);
+  const buyinCol = playerDoc.collection("buyins");
+
+  Promise.all([
+    playerDoc.get(),
+    buyinCol.get()
+  ]).then(([playerSnap, buyinSnap]) => {
+    const cashout = playerSnap.data().cashout || 0;
+    let totalBuyin = 0;
+    buyinSnap.forEach(doc => totalBuyin += doc.data().amount);
+    const total = cashout - totalBuyin;
+
+    tdTotal.textContent = total;
+    playerDoc.update({ total });
+  });
+}
+
+async function handleSitOut(gameId, playerId, trElement) {
+  const playerRef = db.collection("games").doc(gameId).collection("players").doc(playerId);
+  const playerSnap = await playerRef.get();
+  if (!playerSnap.exists) return;
+  const playerData = playerSnap.data();
+
+  const buyinSnap = await db.collection("games").doc(gameId)
+    .collection("players").doc(playerId).collection("buyins").orderBy("createdAt").get();
+
+  const buyins = [];
+  let totalBuyin = 0;
+  buyinSnap.forEach(doc => {
+    const data = doc.data();
+    buyins.push(data);
+    totalBuyin += data.amount;
+  });
+
+  if (playerData.cashout === undefined) {
+    playerData.cashout = 0;
+    playerData.cashoutAt = firebase.firestore.Timestamp.now();
+  }
+
+  const total = playerData.cashout - totalBuyin;
+  playerData.total = total;
+
+  const movedAt = firebase.firestore.Timestamp.now();
+
+  const sitOutRef = db.collection("games").doc(gameId).collection("sitout").doc();
+  await sitOutRef.set({
+    ...playerData,
+    sitOutId: sitOutRef.id,
+    movedAt,
+    buyins
+  });
+
+  // บันทึกลง members/{memberId}/sitoutLogs/{logId} ด้วย
+  if (playerData.memberId) {
+    const logRef = db.collection("members").doc(playerData.memberId).collection("sitoutLogs").doc();
+    await logRef.set({
+      gameId,
+      playerId,
+      name: playerData.name,
+      buyins,
+      cashout: playerData.cashout,
+      total,
+      movedAt
+    });
+  }
+// บันทึกลง Alltimemoney
+  if (total > 0) {
+  const allTimeRef = db.collection("Alltimemoney").doc();
+  await allTimeRef.set({
+    id: allTimeRef.id,
+    memberId: playerData.memberId,
+    name: playerData.name,
+    gameId: gameId,
+    total: total,
+    createdAt: firebase.firestore.Timestamp.now()
+  });
+}
+
+
+  await playerRef.delete();
+  loadGames();
+
+  // Reset UI
+  trElement.innerHTML = "";
+  const tdName = document.createElement("td");
+  const btn = document.createElement("button");
+  btn.textContent = "+Player";
+  btn.onclick = () => openPlayerPopup(gameId, trElement);
+  tdName.appendChild(btn);
+  trElement.appendChild(tdName);
+
+  for (let i = 0; i < 5; i++) {
+    const td = document.createElement("td");
+    const disabledBtn = document.createElement("button");
+    disabledBtn.textContent = ["Buy-in", "Cash-out", "", "Sit-out", "Delete"][i];
+    disabledBtn.disabled = true;
+    td.appendChild(disabledBtn);
+    trElement.appendChild(td);
+  }
+}
+async function handleDeletePlayer(gameId, playerId, trElement) {
+  if (!confirm("Are you sure you want to delete this player and all their data?")) return;
+
+  const playerRef = db.collection("games").doc(gameId).collection("players").doc(playerId);
+  const buyinSnap = await playerRef.collection("buyins").get();
+
+  const batch = db.batch();
+  buyinSnap.forEach(doc => {
+    batch.delete(doc.ref); // ✅ ลบแต่ละ buyin document
+  });
+  batch.delete(playerRef); // ✅ ลบตัว player document ด้วย
+
+  await batch.commit(); // ✅ ทำการลบจริง
+  loadGames(); // ✅ รีโหลดตาราง
+
+  // ล้างแถว UI แล้วใส่ปุ่ม +Player กลับ
+  trElement.innerHTML = "";
+  const tdName = document.createElement("td");
+  const btn = document.createElement("button");
+  btn.textContent = "+Player";
+  btn.onclick = () => openPlayerPopup(gameId, trElement);
+  tdName.appendChild(btn);
+  trElement.appendChild(tdName);
+
+  for (let i = 0; i < 5; i++) {
+    const td = document.createElement("td");
+    const disabledBtn = document.createElement("button");
+    disabledBtn.textContent = ["Buy-in", "Cash-out", "", "Sit-out", "Delete"][i];
+    disabledBtn.disabled = true;
+    td.appendChild(disabledBtn);
+    trElement.appendChild(td);
+  }
+}
+
+
+async function deleteGame(gameId) {
+  const confirmDelete = confirm("คุณต้องการลบเกมนี้ทั้งหมดหรือไม่?");
+  if (!confirmDelete) return;
+
+  const gameRef = db.collection("games").doc(gameId);
+
+  // 🔥 1. ลบ buyins ของทุก player
+  const players = await gameRef.collection("players").get();
+  for (const player of players.docs) {
+    const buyinSnap = await player.ref.collection("buyins").get();
+    for (const buyin of buyinSnap.docs) {
+      await buyin.ref.delete();
+    }
+  }
+
+  // 🔥 2. ลบ players
+  for (const player of players.docs) {
+    await player.ref.delete();
+  }
+
+  // 🔥 3. ลบ sitout
+  const sitoutSnap = await gameRef.collection("sitout").get();
+  for (const doc of sitoutSnap.docs) {
+    await doc.ref.delete();
+  }
+
+  // 🔥 4. ลบตัวเกมหลัก
+  await gameRef.delete();
+
+  alert("ลบเกมและข้อมูลทั้งหมดเรียบร้อยแล้ว");
+  location.reload();
+}
+
+
+
+async function breakGame(gameId) {
+  if (!confirm("ยืนยันการ Break เกม?")) return;
+
+  const gameRef = db.collection("games").doc(gameId);
+  const playersSnap = await gameRef.collection("players").get();
+  const batch = db.batch();
+  const now = new Date();
+
+  for (const doc of playersSnap.docs) {
+    const player = doc.data();
+
+    // ดึง buy-in ทั้งหมดของผู้เล่น
+    const buyinSnap = await gameRef.collection("players").doc(player.id).collection("buyins").get();
+    const totalBuyin = buyinSnap.docs.reduce((sum, b) => sum + (b.data().amount || 0), 0);
+
+    const cash = player.cashout || 0;
+    const total = cash - totalBuyin;
+
+    // สร้างข้อมูล sit-out
+    const sitOutRef = gameRef.collection("sitout").doc();
+    batch.set(sitOutRef, {
+      id: sitOutRef.id,
+      memberId: player.memberId,
+      name: player.name,
+      buyin: totalBuyin,
+      cashout: cash,
+      total,
+      createdAt: now,
+    });
+
+    // เพิ่มใน Alltimemoney หาก total > 0
+    if (total !== 0) {
+      const allTimeRef = db.collection("Alltimemoney").doc();
+      batch.set(allTimeRef, {
+        id: allTimeRef.id,
+        memberId: player.memberId,
+        name: player.name,
+        buyin: totalBuyin,
+        cashout: cash,
+        total,
+        createdAt: now,
+      });
+    }
+  }
+
+  // อัปเดตสถานะเกม
+  batch.update(gameRef, { status: "Game Break" });
+
+  await batch.commit();
+  alert("Break Game สำเร็จ");
+
+  // รีโหลด
+  location.reload();
+}
+
+
+function getTimeFilterRange(type) {
+  const now = new Date();
+  let start;
+  switch (type) {
+    case "day":
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      break;
+    case "week":
+      const dayOfWeek = now.getDay(); // Sunday = 0
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+      break;
+    case "month":
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    default:
+      return 0; // no filter
+  }
+  return start.getTime();
+}
+
+
+
+
+
+async function generatePlayerReport() {
+  const filterType = document.getElementById("reportFilter")?.value || "all";
+  const nameQuery = document.getElementById("searchName")?.value.trim().toLowerCase() || "";
+  const timeFilter = getTimeFilterRange(filterType);
+
+  const membersSnap = await db.collection("members").get();
+  const tbody = document.getElementById("reportBody");
+  tbody.innerHTML = "";
+
+  for (const doc of membersSnap.docs) {
+    const member = doc.data();
+    const logsSnap = await db.collection("members").doc(doc.id).collection("sitoutLogs").get();
+
+    let totalBuyin = 0, totalCashout = 0, profit = 0;
+
+    logsSnap.forEach(log => {
+      const data = log.data();
+      const movedAt = data.movedAt?.seconds ? data.movedAt.seconds * 1000 : 0;
+      if (timeFilter && movedAt < timeFilter) return;
+
+      const sumBuyin = (data.buyins || []).reduce((sum, b) => sum + (b.amount || 0), 0);
+      totalBuyin += sumBuyin;
+      totalCashout += data.cashout || 0;
+      profit += data.total || 0;
+    });
+
+    // ข้ามถ้าไม่มีข้อมูล หรือชื่อไม่ตรงกับที่กรอง
+    if ((totalBuyin === 0 && totalCashout === 0) || 
+        (nameQuery && !member.name.toLowerCase().includes(nameQuery))) continue;
+
+    // แสดงผล 1 แถว ต่อผู้เล่น 1 คน
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${member.name}</td>
+      <td>${totalBuyin}</td>
+      <td>${totalCashout}</td>
+      <td style="color:${profit >= 0 ? 'green' : 'red'}">${profit}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById("reportOverlay").style.display = "flex";
+}
+
+
+
+
+async function loadReportMemberList() {
+  const select = document.getElementById("filterMember");
+  if (!select) return;
+
+  const snap = await db.collection("members").orderBy("name").get();
+  select.innerHTML = `<option value="">-- แสดงทุกคน --</option>`;
+  snap.forEach(doc => {
+    const data = doc.data();
+    select.innerHTML += `<option value="${doc.id}">${data.name}</option>`;
+  });
+}
+function openManagePlayer() {
+  alert("เปิดหน้าจัดการผู้เล่น (ยังไม่เชื่อมระบบจริง)");
+  // หรือเปลี่ยน redirect ไปหน้าใหม่ เช่น
+  // window.location.href = 'manageplayer.html';
+}
+
+function openManagePlayer() {
+  document.getElementById("managePlayerOverlay").style.display = "flex";
+  loadAllPlayers();
+}
+
+async function loadAllPlayers() {
+  const container = document.getElementById("managePlayerBody");
+  container.innerHTML = "";
+
+  const snap = await db.collection("members").orderBy("name").get();
+  snap.forEach(doc => {
+    const data = doc.data();
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${data.name}</td>
+      <td>${data.tel || '-'}</td>
+      <td>${data.email || '-'}</td>
+      <td>
+        <button onclick="editPlayer('${doc.id}')">Edit</button>
+        <button onclick="deletePlayer('${doc.id}', '${data.name}')">Delete</button>
+      </td>
+    `;
+
+    container.appendChild(tr);
+  });
+}
+
+function editPlayer(id) {
+  alert("ยังไม่ได้สร้างฟอร์ม Edit\nPlayer ID: " + id);
+  // TODO: เปิด popup หรือหน้าใหม่เพื่อแก้ไขข้อมูลผู้เล่น
+}
+
+async function deletePlayer(id, name) {
+  const confirmDelete = confirm(`ต้องการลบผู้เล่น "${name}" หรือไม่?`);
+  if (!confirmDelete) return;
+
+  await db.collection("members").doc(id).delete();
+  alert("ลบผู้เล่นแล้ว");
+  loadAllPlayers();
+}
+
+let currentEditPlayerId = null;
+
+async function editPlayer(id) {
+  currentEditPlayerId = id;
+
+  const doc = await db.collection("members").doc(id).get();
+  const data = doc.data();
+
+  document.getElementById("editName").value = data.name || "";
+  document.getElementById("editTel").value = data.tel || "";
+  document.getElementById("editEmail").value = data.email || "";
+
+  // ✅ ซ่อน popup จัดการสมาชิกก่อน
+  document.getElementById("manageMemberOverlay").style.display = "none";
+
+  // ✅ แล้วค่อยแสดง popup edit
+  document.getElementById("editPlayerOverlay").style.display = "flex";
+}
+
+
+function closeEditPlayer() {
+  document.getElementById("editPlayerOverlay").style.display = "none";
+  currentEditPlayerId = null;
+}
+
+async function saveEditPlayer() {
+  const name = document.getElementById("editName").value.trim();
+  const tel = document.getElementById("editTel").value.trim();
+  const email = document.getElementById("editEmail").value.trim();
+
+  if (!name) {
+    alert("กรุณากรอกชื่อ");
+    return;
+  }
+
+  await db.collection("members").doc(currentEditPlayerId).update({
+    name, tel, email
+  });
+
+  alert("อัปเดตข้อมูลเรียบร้อยแล้ว");
+  closeEditPlayer();
+  loadAllPlayers(); // โหลดตารางใหม่
+
+}
+function toggleMemberMenu() {
+  const menu = document.getElementById("memberMenu");
+  menu.style.display = menu.style.display === "none" ? "block" : "none";
+  document.addEventListener("click", hideMemberMenuOutside, { once: true });
+}
+
+function hideMemberMenuOutside(e) {
+  if (!e.target.closest('.dropdown')) {
+    document.getElementById("memberMenu").style.display = "none";
+  }
+}
+
+function openAddMember() {
+  document.getElementById("popupOverlay").style.display = "flex";
+  document.getElementById("memberMenu").style.display = "none";
+}
+
+function openManageMember() {
+  document.getElementById("manageMemberOverlay").style.display = "flex";
+  loadManageMemberList();
+}
+
+function closeManageMember() {
+  document.getElementById("manageMemberOverlay").style.display = "none";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const searchBox = document.getElementById("searchMemberManage");
+  if (searchBox) {
+    searchBox.addEventListener("input", e => {
+      loadManageMemberList(e.target.value.toLowerCase());
+    });
+  }
+});
+
+async function loadManageMemberList(query = "") {
+  const container = document.getElementById("manageMemberList");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const snap = await db.collection("members").orderBy("name").get();
+  snap.forEach(doc => {
+    const data = doc.data();
+    if (!query || data.name.toLowerCase().includes(query)) {
+      const div = document.createElement("div");
+      div.style = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;";
+      div.innerHTML = `
+        <span>${data.name}</span>
+        <span>
+          <button onclick="editPlayer('${doc.id}')">Edit</button>
+          <button onclick="deletePlayer('${doc.id}', '${data.name}')">Delete</button>
+        </span>
+      `;
+      container.appendChild(div);
+    }
+  });
+}
+
+function toggleMemberMenu() {
+  const menu = document.getElementById("memberMenu");
+  menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
+}
+
+function closeMemberMenu() {
+  const menu = document.getElementById("memberMenu");
+  menu.style.display = "none";
+}
+
+</script>
+
+</body>
+</html>

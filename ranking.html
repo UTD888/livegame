@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LUXU All Time Money List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f8f9fa;
+      color: #222;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      max-width: 600px;
+      margin: auto;
+      border-collapse: collapse;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      padding: 12px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    td:last-child {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+<p style="text-align: center;"><img src="luxu-logo.png" style="width: 10%;min-width: 120px;"></p>
+  <h1>🏆 All Time Money List</h1>
+<div style="text-align:center; margin:20px 0;">
+  <button onclick="showTable('alltime')">🏆 All Time</button>
+  <button onclick="showTable('monthly')">📅 This Month</button>
+  <button onclick="showTable('history')">📚 History</button>
+</div>
+
+
+<div id="tableContainer">
+  <div id="alltimeTable" style="display:block;">
+    <h2 style="text-align:center;">🏆 All Time Money List</h2>
+    <table>
+      <thead>
+        <tr><th>Rank</th><th>Name</th><th>Profit</th></tr>
+      </thead>
+      <tbody id="allTimeBody"></tbody>
+    </table>
+  </div>
+
+  <div id="monthlyTable" style="display:none;">
+    <h2 style="text-align:center;">📅 Top Players of This Month</h2>
+    <h3 style="text-align: center;">Cut off time is every 1st day of every month.</h3>
+    <table>
+      <thead>
+        <tr><th>Rank</th><th>Name</th><th>Profit</th></tr>
+      </thead>
+      <tbody id="monthlyBody"></tbody>
+    </table>
+  </div>
+
+  <div id="historyTable" style="display:none;">
+  <h2 style="text-align:center;">📚 Top 3 Player History (by Month)</h2>
+  <div id="historyBody" style="max-width:600px; margin:auto; text-align:left;"></div>
+</div>
+
+</div>
+
+
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTB31c0-vvPgYfMUowxdM5Dqb39Yk94Ck",
+      authDomain: "playerranking-d6079.firebaseapp.com",
+      projectId: "playerranking-d6079",
+      storageBucket: "playerranking-d6079.appspot.com",
+      messagingSenderId: "993907183307",
+      appId: "1:993907183307:web:37e8264eff1e248853554e",
+      measurementId: "G-ZJMX31ZBWJ"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    async function loadAllTimeMoney() {
+      const snap = await db.collection("Alltimemoney").get();
+      const dataMap = new Map();
+
+      snap.forEach(doc => {
+        const { name, total } = doc.data();
+        if (!dataMap.has(name)) dataMap.set(name, 0);
+        dataMap.set(name, dataMap.get(name) + total);
+      });
+
+      const sorted = Array.from(dataMap.entries())
+        .map(([name, total]) => ({ name, total }))
+        .sort((a, b) => b.total - a.total);
+
+      const tbody = document.getElementById("allTimeBody");
+      sorted.forEach((item, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${item.name}</td>
+          <td style="color:${item.total >= 0 ? 'green' : 'red'}">${item.total}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    
+    async function loadMonthlyTopPlayers() {
+  const snap = await db.collection("Alltimemoney").get();
+  const dataMap = new Map();
+
+  // คำนวณช่วงต้นเดือนนี้
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  snap.forEach(doc => {
+    const data = doc.data();
+    const createdAt = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : 0;
+    if (createdAt < startOfMonth) return; // ข้ามถ้าไม่ใช่ของเดือนนี้
+
+    const { name, total } = data;
+    if (!dataMap.has(name)) dataMap.set(name, 0);
+    dataMap.set(name, dataMap.get(name) + total);
+  });
+
+  const sorted = Array.from(dataMap.entries())
+    .map(([name, total]) => ({ name, total }))
+    .sort((a, b) => b.total - a.total);
+
+  const tbody = document.getElementById("monthlyBody");
+  sorted.forEach((item, index) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${item.name}</td>
+      <td style="color:${item.total >= 0 ? 'green' : 'red'}">${item.total}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+let tableSequence = ['alltime', 'monthly', 'history'];
+let currentIndex = 0;
+let autoSwitch = true;
+let switchInterval = null;
+
+function showTable(table) {
+  document.getElementById("alltimeTable").style.display = "none";
+  document.getElementById("monthlyTable").style.display = "none";
+  document.getElementById("historyTable").style.display = "none";
+  document.getElementById(`${table}Table`).style.display = "block";
+  autoSwitch = false;
+  resetAutoSwitch();
+}
+
+function resetAutoSwitch() {
+  clearInterval(switchInterval);
+  switchInterval = setInterval(() => {
+    currentIndex = (currentIndex + 1) % tableSequence.length;
+    const table = tableSequence[currentIndex];
+    showTable(table);
+    autoSwitch = true;
+  }, 30000);
+}
+
+
+async function loadTopPlayerHistory() {
+  const snap = await db.collection("Alltimemoney").get();
+  const monthMap = new Map();
+
+  snap.forEach(doc => {
+    const data = doc.data();
+    const createdAt = data.createdAt?.seconds ? new Date(data.createdAt.seconds * 1000) : null;
+    if (!createdAt) return;
+
+    const key = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+    const playerKey = data.name;
+    const total = data.total;
+
+    if (!monthMap.has(key)) monthMap.set(key, new Map());
+    const playerMap = monthMap.get(key);
+
+    if (!playerMap.has(playerKey)) playerMap.set(playerKey, 0);
+    playerMap.set(playerKey, playerMap.get(playerKey) + total);
+  });
+
+  // เรียงเดือนล่าสุด -> เก่า
+  const sortedMonths = Array.from(monthMap.keys()).sort((a, b) => b.localeCompare(a));
+  const historyDiv = document.getElementById("historyBody");
+  historyDiv.innerHTML = "";
+
+  sortedMonths.forEach(monthKey => {
+    const [year, month] = monthKey.split("-");
+    const title = new Date(`${year}-${month}-01`).toLocaleString('th-TH', { month: 'long', year: 'numeric' });
+
+    const players = Array.from(monthMap.get(monthKey).entries())
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 3); // Top 3
+
+    if (players.length === 0) return;
+
+    const section = document.createElement("div");
+    section.innerHTML = `<h3>${title}</h3>`;
+    const medals = ['🥇', '🥈', '🥉'];
+players.forEach((p, i) => {
+  const medal = medals[i] || `${i + 1}.`;
+  section.innerHTML += `
+    <div style="margin-left:10px;">
+      ${medal} ${p.name}
+      <span style="float:right; color:${p.total >= 0 ? 'green' : 'red'};">${p.total}</span>
+    </div>`;
+});
+    historyDiv.appendChild(section);
+  });
+}
+
+window.onload = () => {
+  loadAllTimeMoney();
+  loadMonthlyTopPlayers();
+  loadTopPlayerHistory();
+  resetAutoSwitch();
+};
+
+
+  </script>
+</body>
+</html>
